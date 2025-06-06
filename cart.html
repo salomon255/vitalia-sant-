@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elystyle - Votre Panier</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            display: flex; 
+            flex-direction: column; 
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #fef7ff 0%, #fdf4ff 50%, #fdf2f8 100%);
+            overflow-x: hidden;
+        }
+        main { 
+            flex-grow: 1; 
+        }
+        .font-serif { 
+            font-family: 'Playfair Display', serif; 
+        }
+        .header-glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .section-title {
+            font-size: 2rem; 
+            font-weight: 600;
+            text-align: center;
+            background: linear-gradient(135deg, #7c3aed, #ec4899, #f59e0b);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            position: relative;
+        }
+        @media (min-width: 768px) {
+            .section-title {
+                 font-size: 2.5rem;
+            }
+        }
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 50%;
+            transform: translateX(-50%);
+            width: 100px; height: 3px;
+            background: linear-gradient(90deg, #7c3aed, #ec4899);
+            border-radius: 2px;
+        }
+         .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        .modal {
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        }
+        .modal.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .modal-content {
+            transition: transform 0.3s ease-out;
+        }
+        .modal.hidden .modal-content {
+            transform: scale(0.95);
+        }
+        .btn-payment {
+            background-color: #f3e8ff; /* Light purple */
+            color: #6b21a8; /* Dark purple */
+            border: 2px solid #a855f7; /* Medium purple */
+        }
+        .btn-payment:hover {
+            background-color: #e9d5ff; /* Slightly darker light purple */
+            border-color: #7c3aed;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <header class="header-glass shadow-xl sticky top-0 z-50">
+        <nav class="container mx-auto px-4 sm:px-6 py-4">
+            <div class="flex items-center justify-between">
+                <a href="index.html" class="text-2xl sm:text-3xl font-serif font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent hover:from-purple-700 hover:to-pink-700 transition-all duration-300">
+                    Elystyle
+                </a>
+                <div class="flex items-center space-x-3 sm:space-x-6 text-sm sm:text-base">
+                    <a href="index.html" class="text-gray-700 hover:text-purple-600 font-medium transition-colors duration-200 relative group">
+                        Boutique
+                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-purple-600 transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                    <a href="admin.html" class="text-gray-700 hover:text-purple-600 font-medium transition-colors duration-200 relative group">
+                        Admin
+                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-purple-600 transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                    <a href="cart.html" class="text-gray-700 hover:text-purple-600 font-medium transition-all duration-200 relative group flex items-center">
+                        <span class="hidden sm:inline">🛍️ Panier</span>
+                        <span class="sm:hidden">🛍️</span>
+                        <span id="cartCountHeader" class="absolute -top-2 -right-2 bg-gradient-to-r from-pink-500 to-red-500 text-white text-xs rounded-full h-5 w-5 sm:h-6 sm:w-6 flex items-center justify-center font-bold shadow-lg">0</span>
+                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-purple-600 transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 py-8">
+        <h1 class="section-title font-serif mb-10">Votre Panier</h1>
+
+        <div id="cartItemsContainerWrapper" class="bg-white shadow-xl rounded-2xl p-4 sm:p-6 overflow-x-auto">
+            <div id="cartItemsContainer"></div>
+            <p id="emptyCartMessage" class="text-center text-gray-500 py-8">Votre panier est vide. <a href="index.html" class="text-pink-500 hover:underline">Continuer vos achats</a></p>
+        </div>
+
+        <form id="checkoutForm" class="mt-8" style="display: none;">
+            <div class="bg-white shadow-xl rounded-2xl p-4 sm:p-6">
+                <h2 class="text-xl sm:text-2xl font-semibold mb-6 text-purple-700 font-serif">Adresse de Livraison</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                    <div>
+                        <label for="fullName" class="block text-sm font-medium text-gray-700 mb-1">Nom complet</label>
+                        <input type="text" name="fullName" id="fullName" required
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+                        <input type="tel" name="phone" id="phone" required
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 sm:text-sm">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="address" class="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+                        <input type="text" name="address" id="address" required
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="city" class="block text-sm font-medium text-gray-700 mb-1">Ville</label>
+                        <input type="text" name="city" id="city" required
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="postalCode" class="block text-sm font-medium text-gray-700 mb-1">Code Postal</label>
+                        <input type="text" name="postalCode" id="postalCode" required
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 sm:text-sm">
+                    </div>
+                </div>
+            </div>
+
+            <div id="cartSummary" class="mt-6 bg-white shadow-xl rounded-2xl p-4 sm:p-6 text-right">
+                <h2 class="text-xl sm:text-2xl font-semibold mb-4 text-purple-700 font-serif">Résumé de la Commande</h2>
+                <div class="space-y-2 text-sm sm:text-base">
+                    <p>Sous-total : <span id="cartSubtotal" class="font-bold">0.00</span> €</p>
+                    <p>Frais de port : <span id="shippingCost" class="font-bold">5.00</span> € <small>(Fixe)</small></p>
+                    <hr class="my-3 sm:my-4">
+                    <p class="text-lg sm:text-xl font-bold">Total : <span id="cartTotal" class="font-bold text-pink-600">0.00</span> €</p>
+                </div>
+                <button type="submit" id="submitOrderButton"
+                        class="btn-primary mt-6 text-white font-bold py-3 px-6 rounded-xl w-full md:w-auto text-sm sm:text-base shadow-lg">
+                    Payer et Passer la Commande
+                </button>
+            </div>
+        </form>
+        <div id="orderConfirmationMessage" class="mt-8 p-6 bg-green-100 border-l-4 border-green-500 text-green-700 rounded-lg shadow-md" style="display: none;">
+            <p class="font-bold text-lg">Merci pour votre commande !</p>
+            <p>Votre commande a été passée avec succès. Un email de notification a été envoyé à l'administrateur. Vous allez être redirigé vers la page d'accueil.</p>
+        </div>
+    </main>
+
+    <!-- Payment Method Modal -->
+    <div id="paymentMethodModal" class="modal fixed inset-0 bg-gray-900 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-[60] hidden">
+        <div class="modal-content relative p-6 border w-11/12 md:w-1/2 lg:w-1/3 shadow-2xl rounded-xl bg-white transform">
+            <div class="flex justify-between items-center pb-3 border-b mb-4">
+                <p class="text-xl font-bold text-purple-700 font-serif">Choisissez votre mode de paiement</p>
+                <button id="closePaymentMethodModal" class="text-gray-500 hover:text-gray-800 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="space-y-3">
+                <button data-payment-method="Airtel Money" class="payment-select-btn btn-payment w-full text-left py-3 px-4 rounded-lg font-medium text-sm sm:text-base transition-all duration-200 transform hover:scale-105">Airtel Money</button>
+                <button data-payment-method="Orange Money" class="payment-select-btn btn-payment w-full text-left py-3 px-4 rounded-lg font-medium text-sm sm:text-base transition-all duration-200 transform hover:scale-105">Orange Money</button>
+                <button data-payment-method="M-Pesa" class="payment-select-btn btn-payment w-full text-left py-3 px-4 rounded-lg font-medium text-sm sm:text-base transition-all duration-200 transform hover:scale-105">M-Pesa</button>
+                <button data-payment-method="Visa" class="payment-select-btn btn-payment w-full text-left py-3 px-4 rounded-lg font-medium text-sm sm:text-base transition-all duration-200 transform hover:scale-105">Carte Visa</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Money Phone Input Modal -->
+    <div id="mobileMoneyModal" class="modal fixed inset-0 bg-gray-900 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-[70] hidden">
+        <div class="modal-content relative p-6 border w-11/12 md:w-1/2 lg:w-1/3 shadow-2xl rounded-xl bg-white transform">
+            <div class="flex justify-between items-center pb-3 border-b mb-4">
+                <p id="mobileMoneyModalTitle" class="text-xl font-bold text-purple-700 font-serif">Saisir le numéro</p>
+                <button id="closeMobileMoneyModal" class="text-gray-500 hover:text-gray-800 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div>
+                <label for="mobileMoneyPhone" class="block text-sm font-medium text-gray-700 mb-1">Numéro de téléphone</label>
+                <input type="tel" id="mobileMoneyPhone" name="mobileMoneyPhone" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 sm:text-sm" placeholder="Ex: 08XXXXXXXX">
+                <div class="mt-6 flex flex-col sm:flex-row sm:justify-end space-y-3 sm:space-y-0 sm:space-x-3">
+                    <button id="backToPaymentMethodsFromMobile" type="button" class="py-2 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors w-full sm:w-auto">Retour</button>
+                    <button id="submitMobileMoney" type="button" class="btn-primary text-white font-bold py-2 px-4 rounded-lg text-sm w-full sm:w-auto">Valider le Paiement</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Visa Card Modal -->
+    <div id="visaCardModal" class="modal fixed inset-0 bg-gray-900 bg-opacity-75 overflow-y-auto h-full w-full flex items-center justify-center z-[70] hidden">
+        <div class="modal-content relative p-6 border w-11/12 md:w-1/2 lg:w-2/5 shadow-2xl rounded-xl bg-white transform">
+             <div class="flex justify-between items-center pb-3 border-b mb-4">
+                <p class="text-xl font-bold text-purple-700 font-serif">Détails de la Carte Visa</p>
+                <button id="closeVisaCardModal" class="text-gray-500 hover:text-gray-800 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label for="cardNumber" class="block text-sm font-medium text-gray-700 mb-1">Numéro de carte</label>
+                    <input type="text" id="cardNumber" name="cardNumber" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500 sm:text-sm" placeholder="XXXX XXXX XXXX XXXX">
+                </div>
+                <div>
+                    <label for="cardHolderName" class="block text-sm font-medium text-gray-700 mb-1">Nom du titulaire</label>
+                    <input type="text" id="cardHolderName" name="cardHolderName" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500 sm:text-sm" placeholder="John Doe">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="expiryDate" class="block text-sm font-medium text-gray-700 mb-1">Date d'expiration (MM/AA)</label>
+                        <input type="text" id="expiryDate" name="expiryDate" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500 sm:text-sm" placeholder="MM/AA">
+                    </div>
+                    <div>
+                        <label for="cvv" class="block text-sm font-medium text-gray-700 mb-1">CVV</label>
+                        <input type="text" id="cvv" name="cvv" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500 sm:text-sm" placeholder="XXX">
+                    </div>
+                </div>
+                 <div class="mt-6 flex flex-col sm:flex-row sm:justify-end space-y-3 sm:space-y-0 sm:space-x-3">
+                    <button id="backToPaymentMethodsFromVisa" type="button" class="py-2 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors w-full sm:w-auto">Retour</button>
+                    <button id="submitVisaPayment" type="button" class="btn-primary text-white font-bold py-2 px-4 rounded-lg text-sm w-full sm:w-auto">Payer avec Visa</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <footer class="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-8 mt-auto shadow-inner">
+        <div class="container mx-auto px-4 sm:px-6 text-center">
+             <p class="text-lg">©2025 Elystyle. Tous droits réservés.</p>
+            <p class="text-sm mt-2">Créé avec ❤️ et passion.</p>
+        </div>
+    </footer>
+
+    <script>
+        const cartItemsContainerWrapper = document.getElementById('cartItemsContainerWrapper');
+        const cartItemsContainer = document.getElementById('cartItemsContainer');
+        const emptyCartMessage = document.getElementById('emptyCartMessage');
+        const checkoutForm = document.getElementById('checkoutForm');
+        const cartSummaryDiv = document.getElementById('cartSummary');
+        const cartSubtotalSpan = document.getElementById('cartSubtotal');
+        const shippingCostSpan = document.getElementById('shippingCost');
+        const cartTotalSpan = document.getElementById('cartTotal');
+        const cartCountHeaderSpan = document.getElementById('cartCountHeader');
+        const submitOrderButton = document.getElementById('submitOrderButton');
+        const orderConfirmationMessage = document.getElementById('orderConfirmationMessage');
+
+        // Modal elements
+        const paymentMethodModal = document.getElementById('paymentMethodModal');
+        const mobileMoneyModal = document.getElementById('mobileMoneyModal');
+        const visaCardModal = document.getElementById('visaCardModal');
+        const closePaymentMethodModalBtn = document.getElementById('closePaymentMethodModal');
+        const closeMobileMoneyModalBtn = document.getElementById('closeMobileMoneyModal');
+        const closeVisaCardModalBtn = document.getElementById('closeVisaCardModal');
+        const paymentSelectBtns = document.querySelectorAll('.payment-select-btn');
+        const mobileMoneyModalTitle = document.getElementById('mobileMoneyModalTitle');
+        const mobileMoneyPhoneInput = document.getElementById('mobileMoneyPhone');
+        const submitMobileMoneyBtn = document.getElementById('submitMobileMoney');
+        const submitVisaPaymentBtn = document.getElementById('submitVisaPayment');
+        const backToPaymentMethodsFromMobileBtn = document.getElementById('backToPaymentMethodsFromMobile');
+        const backToPaymentMethodsFromVisaBtn = document.getElementById('backToPaymentMethodsFromVisa');
+        
+        let currentPaymentMethod = ''; 
+        let addressDataForOrder = {};
+
+
+        function getCart() {
+            const cart = localStorage.getItem('elystyleCart');
+            return cart ? JSON.parse(cart) : [];
+        }
+
+        function saveCart(cart) {
+            localStorage.setItem('elystyleCart', JSON.stringify(cart));
+            displayCartItems();
+            updateCartCountHeader();
+        }
+
+        function clearCart() {
+            localStorage.removeItem('elystyleCart');
+            displayCartItems(); 
+            updateCartCountHeader();
+        }
+
+        function updateCartCountHeader() {
+            const cart = getCart();
+            const totalItems = cart.reduce((sum, item) => {
+                 if (typeof item.quantity === 'number' && !isNaN(item.quantity)) {
+                    return sum + item.quantity;
+                }
+                return sum;
+            }, 0);
+            if (cartCountHeaderSpan) { 
+                cartCountHeaderSpan.textContent = totalItems;
+            }
+        }
+
+        function removeFromCart(productId) {
+            let cart = getCart();
+            cart = cart.filter(item => item.id !== productId);
+            saveCart(cart);
+        }
+
+        function updateQuantity(productId, newQuantity) {
+            let cart = getCart();
+            const productIndex = cart.findIndex(item => item.id === productId);
+            if (productIndex > -1) {
+                if (newQuantity > 0) {
+                    cart[productIndex].quantity = parseInt(newQuantity);
+                } else {
+                    cart = cart.filter(item => item.id !== productId);
+                }
+            }
+            saveCart(cart);
+        }
+
+        function displayCartItems() {
+            const cart = getCart();
+            cartItemsContainer.innerHTML = ''; 
+            
+            if (cart.length === 0) {
+                emptyCartMessage.style.display = 'block';
+                cartItemsContainerWrapper.classList.remove('overflow-x-auto'); 
+                if (cartSummaryDiv) cartSummaryDiv.style.display = 'none'; 
+                checkoutForm.style.display = 'none';
+                orderConfirmationMessage.style.display = 'none';
+                 if (submitOrderButton) { // S'assurer que le bouton est réactivé si le panier devient vide
+                    submitOrderButton.disabled = false;
+                    submitOrderButton.textContent = 'Payer et Passer la Commande';
+                }
+            } else {
+                emptyCartMessage.style.display = 'none';
+                cartItemsContainerWrapper.classList.add('overflow-x-auto'); 
+                if (cartSummaryDiv) cartSummaryDiv.style.display = 'block';
+                checkoutForm.style.display = 'block';
+
+                let subtotal = 0;
+                const shippingCost = 5.00;
+
+                const table = document.createElement('table');
+                table.className = 'w-full text-left border-collapse table-fixed sm:table-auto'; 
+                table.style.minWidth = '600px'; 
+
+                table.innerHTML = `
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="p-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase w-2/5 sm:w-auto">Produit</th>
+                            <th class="p-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase">Prix</th>
+                            <th class="p-3 text-xs font-medium tracking-wider text-center text-gray-500 uppercase">Quantité</th>
+                            <th class="p-3 text-xs font-medium tracking-wider text-right text-gray-500 uppercase">Total</th>
+                            <th class="p-3 text-xs font-medium tracking-wider text-center text-gray-500 uppercase">Action</th>
+                        </tr>
+                    </thead>
+                `;
+                const tbody = document.createElement('tbody');
+                tbody.className = "bg-white divide-y divide-gray-200";
+
+                cart.forEach(item => {
+                    const itemPrice = parseFloat(item.price) || 0;
+                    const itemQuantity = parseInt(item.quantity) || 0;
+                    const itemTotal = itemPrice * itemQuantity;
+                    subtotal += itemTotal;
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="p-3 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-12 w-12">
+                                    <img src="${item.image_url || 'https://placehold.co/50x50/E9D5FF/7C3AED?text=Ely'}" alt="${item.name}" class="h-12 w-12 rounded-md object-cover">
+                                </div>
+                                <div class="ml-3">
+                                    <div class="text-sm font-medium text-gray-900 truncate" title="${item.name}">${item.name}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="p-3 whitespace-nowrap text-sm text-gray-500">${itemPrice.toFixed(2)} €</td>
+                        <td class="p-3 whitespace-nowrap text-center">
+                            <input type="number" value="${itemQuantity}" min="1" 
+                                   class="w-16 text-center border border-gray-300 rounded-md p-1 text-sm focus:ring-pink-500 focus:border-pink-500 quantity-input" 
+                                   data-product-id="${item.id}">
+                        </td>
+                        <td class="p-3 whitespace-nowrap text-sm text-gray-500 text-right">${itemTotal.toFixed(2)} €</td>
+                        <td class="p-3 whitespace-nowrap text-center">
+                            <button class="text-red-500 hover:text-red-700 remove-item-btn" data-product-id="${item.id}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mx-auto" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                table.appendChild(tbody);
+                cartItemsContainer.appendChild(table); 
+
+                if (cartSubtotalSpan) cartSubtotalSpan.textContent = subtotal.toFixed(2);
+                if (shippingCostSpan) shippingCostSpan.textContent = shippingCost.toFixed(2);
+                if (cartTotalSpan) cartTotalSpan.textContent = (subtotal + shippingCost).toFixed(2);
+            }
+            updateCartCountHeader(); 
+
+            document.querySelectorAll('.remove-item-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    removeFromCart(this.dataset.productId);
+                });
+            });
+            document.querySelectorAll('.quantity-input').forEach(input => {
+                input.addEventListener('change', function() {
+                    const newQuantity = parseInt(this.value);
+                    updateQuantity(this.dataset.productId, newQuantity);
+                });
+            });
+        }
+
+        function showModal(modalElement) {
+            modalElement.classList.remove('hidden');
+        }
+        function hideModal(modalElement) {
+            modalElement.classList.add('hidden');
+        }
+
+        checkoutForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            if (!checkoutForm.checkValidity()) {
+                checkoutForm.reportValidity();
+                return;
+            }
+
+            const formData = new FormData(checkoutForm);
+            addressDataForOrder = {
+                fullName: formData.get('fullName'),
+                phone: formData.get('phone'),
+                address: formData.get('address'),
+                city: formData.get('city'),
+                postalCode: formData.get('postalCode')
+            };
+
+            showModal(paymentMethodModal);
+            if (submitOrderButton) {
+                submitOrderButton.disabled = true;
+                submitOrderButton.textContent = 'Choix du paiement...';
+            }
+        });
+
+        paymentSelectBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                currentPaymentMethod = this.dataset.paymentMethod;
+                hideModal(paymentMethodModal);
+                if (currentPaymentMethod === 'Visa') {
+                    showModal(visaCardModal);
+                } else {
+                    mobileMoneyModalTitle.textContent = `Saisir le numéro ${currentPaymentMethod}`;
+                    mobileMoneyPhoneInput.value = ''; 
+                    showModal(mobileMoneyModal);
+                }
+            });
+        });
+
+        function closeAllModalsAndResetButton() {
+            hideModal(paymentMethodModal);
+            hideModal(mobileMoneyModal);
+            hideModal(visaCardModal);
+            if (submitOrderButton && getCart().length > 0) { // Only enable if cart is not empty
+                submitOrderButton.disabled = false;
+                submitOrderButton.textContent = 'Payer et Passer la Commande';
+            }
+        }
+
+        closePaymentMethodModalBtn.addEventListener('click', closeAllModalsAndResetButton);
+        closeMobileMoneyModalBtn.addEventListener('click', closeAllModalsAndResetButton);
+        closeVisaCardModalBtn.addEventListener('click', closeAllModalsAndResetButton);
+
+        backToPaymentMethodsFromMobileBtn.addEventListener('click', () => {
+            hideModal(mobileMoneyModal);
+            showModal(paymentMethodModal);
+        });
+        backToPaymentMethodsFromVisaBtn.addEventListener('click', () => {
+            hideModal(visaCardModal);
+            showModal(paymentMethodModal);
+        });
+
+        function finalizeOrder(paymentDetails) {
+            hideModal(mobileMoneyModal);
+            hideModal(visaCardModal);
+
+            const cartData = getCart();
+            const totalAmount = cartTotalSpan.textContent; 
+
+            let itemsSummaryText = "Articles commandés :\n";
+            cartData.forEach(item => {
+                itemsSummaryText += `- ${item.name} (Quantité: ${item.quantity}, Prix Unitaire: ${parseFloat(item.price).toFixed(2)} €)\n`;
+            });
+
+            let paymentInfoForEmail = `Type: ${currentPaymentMethod}\n`;
+            if (currentPaymentMethod === 'Visa') {
+                paymentInfoForEmail += `Numéro (partiel): **** **** **** ${paymentDetails.cardNumber.slice(-4)}\nTitulaire: ${paymentDetails.cardHolderName}`;
+            } else { 
+                paymentInfoForEmail += `Numéro: ${paymentDetails.phoneNumber}`;
+            }
+            
+            const emailForm = document.createElement('form');
+            emailForm.action = 'https://formsubmit.co/elielengo007@gmail.com';
+            emailForm.method = 'POST';
+            emailForm.style.display = 'none';
+
+            const formFields = {
+                _subject: `Nouvelle Commande Elystyle - ${addressDataForOrder.fullName}`,
+                _captcha: "false", 
+                Nom_Client: addressDataForOrder.fullName,
+                Telephone_Client: addressDataForOrder.phone,
+                Adresse_Client: `${addressDataForOrder.address}, ${addressDataForOrder.city}, ${addressDataForOrder.postalCode}`,
+                Mode_Paiement: currentPaymentMethod,
+                Details_Paiement: paymentInfoForEmail,
+                Commande_Items: itemsSummaryText,
+                Montant_Total: totalAmount
+            };
+
+            for (const key in formFields) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = formFields[key];
+                emailForm.appendChild(input);
+            }
+            document.body.appendChild(emailForm);
+            emailForm.submit();
+            document.body.removeChild(emailForm); // Clean up the form from DOM
+
+            // User feedback and cart clearing
+            if (orderConfirmationMessage) orderConfirmationMessage.style.display = 'block';
+            checkoutForm.style.display = 'none'; 
+            clearCart(); 
+            
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 5000); // Increased delay to allow FormSubmit redirect to happen if any, or for user to see message
+        }
+
+        submitMobileMoneyBtn.addEventListener('click', () => {
+            const phoneNumber = mobileMoneyPhoneInput.value.trim();
+            if (!phoneNumber) {
+                alert('Veuillez saisir un numéro de téléphone.');
+                mobileMoneyPhoneInput.focus();
+                return;
+            }
+            if (!/^\d{8,15}$/.test(phoneNumber)) {
+                 alert('Veuillez saisir un numéro de téléphone valide.');
+                 mobileMoneyPhoneInput.focus();
+                 return;
+            }
+            
+            submitMobileMoneyBtn.disabled = true;
+            submitMobileMoneyBtn.textContent = 'Traitement...';
+
+            setTimeout(() => { 
+                finalizeOrder({ phoneNumber });
+                // No need to re-enable button as page will redirect
+            }, 1500);
+        });
+
+        submitVisaPaymentBtn.addEventListener('click', () => {
+            const cardNumber = document.getElementById('cardNumber').value.trim();
+            const cardHolderName = document.getElementById('cardHolderName').value.trim();
+            const expiryDate = document.getElementById('expiryDate').value.trim();
+            const cvv = document.getElementById('cvv').value.trim();
+
+            if (!cardNumber || !cardHolderName || !expiryDate || !cvv) {
+                alert('Veuillez remplir tous les champs de la carte.');
+                return;
+            }
+            if (!/^\d{13,19}$/.test(cardNumber.replace(/\s/g, ''))) {
+                 alert('Numéro de carte invalide.'); return;
+            }
+            if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiryDate)) {
+                 alert("Date d'expiration invalide (MM/AA)."); return;
+            }
+            if (!/^\d{3,4}$/.test(cvv)) {
+                 alert('CVV invalide.'); return;
+            }
+            
+            submitVisaPaymentBtn.disabled = true;
+            submitVisaPaymentBtn.textContent = 'Traitement Visa...';
+
+            setTimeout(() => { 
+                finalizeOrder({ cardNumber, cardHolderName, expiryDate, cvv });
+                 // No need to re-enable button as page will redirect
+            }, 1500);
+        });
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            displayCartItems();
+            updateCartCountHeader(); 
+        });
+    </script>
+
+</body>
+</html>

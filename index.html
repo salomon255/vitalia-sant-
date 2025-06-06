@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elystyle - Boutique</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            display: flex; 
+            flex-direction: column; 
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #fef7ff 0%, #fdf4ff 50%, #fdf2f8 100%);
+            overflow-x: hidden;
+        }
+        main { 
+            flex-grow: 1; 
+        }
+        .font-serif { 
+            font-family: 'Playfair Display', serif; 
+        }
+
+        .product-card { 
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex; 
+            flex-direction: column;
+        }
+        .product-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        .product-card img { 
+            aspect-ratio: 1 / 1; 
+            object-fit: cover;
+            transition: transform 0.6s ease;
+        }
+        .product-card:hover img {
+            transform: scale(1.1);
+        }
+
+        .discount-product-card {
+            width: 220px;
+            min-width: 220px; 
+            flex-shrink: 0; 
+            margin-right: 1rem; 
+        }
+        .discount-product-card img {
+            height: 200px; 
+        }
+        .discount-product-card .product-card-content {
+            padding: 0.75rem; 
+        }
+        .discount-product-card .product-card-title {
+            font-size: 1rem;
+            margin-bottom: 0.25rem;
+        }
+        .discount-product-card .product-card-description {
+            font-size: 0.75rem;
+            margin-bottom: 0.5rem;
+            height: 40px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2; 
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .discount-product-card .product-card-price {
+             font-size: 0.875rem;
+        }
+         .discount-product-card .add-to-cart-btn {
+            padding-top: 0.375rem; padding-bottom: 0.375rem;
+            padding-left: 0.75rem; padding-right: 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        /* STYLES POUR LES BOUTONS DE CATÉGORIE (RÉTABLIS) */
+        .category-btn {
+            padding: 0.6rem 1.2rem; 
+            margin: 0.25rem; 
+            border: 2px solid transparent;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            color: #7c3aed; /* Violet par défaut (couleur de thème) */
+            border-radius: 50px; 
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+            letter-spacing: 0.025em;
+            position: relative;
+            overflow: hidden;
+            font-size: 0.875rem; /* Taille de base pour mobile */
+        }
+        @media (min-width: 640px) { /* sm breakpoint */
+            .category-btn {
+                padding: 0.75rem 1.5rem;
+                font-size: 1rem; /* Taille de police normale pour écrans plus grands */
+            }
+        }
+        .category-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; /* Commence hors de l'écran à gauche */
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); /* Effet de brillance */
+            transition: left 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Transition plus douce */
+        }
+        .category-btn:hover::before {
+            left: 100%; /* Fait glisser la brillance vers la droite */
+        }
+        .category-btn:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(124, 58, 237, 0.4); /* Ombre violette */
+            border-color: #7c3aed; /* Bordure violette au survol */
+        }
+        .category-btn.active { 
+            background: linear-gradient(135deg, #7c3aed, #a855f7); /* Dégradé violet pour l'état actif */
+            color: white; 
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(124, 58, 237, 0.5);
+            border-color: #7c3aed; /* Bordure pour l'état actif */
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 2rem; /* sm: 2.25rem */
+            font-weight: 700;
+            color: #6b21a8; /* dark purple */
+            margin-bottom: 2rem; /* sm: 2.5rem */
+            position: relative;
+            padding-bottom: 0.75rem; /* sm: 1rem */
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        @media (min-width: 640px) { /* sm breakpoint */
+            .section-title {
+                font-size: 2.25rem;
+                margin-bottom: 2.5rem;
+                padding-bottom: 1rem;
+            }
+        }
+        .section-title::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 0;
+            width: 80px; /* sm: 100px */
+            height: 4px;
+            background: linear-gradient(90deg, #ec4899, #f87171); /* pink-red gradient */
+            border-radius: 2px;
+        }
+         @media (min-width: 640px) { /* sm breakpoint */
+            .section-title::after {
+                 width: 100px;
+            }
+        }
+        
+        .badge-product {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 0.25rem 0.6rem;
+            border-radius: 9999px; /* full */
+            font-size: 0.7rem; /* sm: 0.75rem */
+            font-weight: 600;
+            z-index: 10;
+            animation: pulse 2s infinite;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        @media (min-width: 640px) { /* sm breakpoint */
+            .badge-product {
+                font-size: 0.75rem;
+            }
+        }
+        .badge-discount-display {
+            background: linear-gradient(135deg, #ef4444, #f97316); /* red-orange */
+            color: white;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+        .search-container {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #ec4899, #f97316); /* NOUVEAU: Rose vif à Orange */
+            color: white;
+            padding: 0.5rem 1rem; /* Retaillé dans le JS pour les cartes promos, sinon default */
+            border-radius: 8px; /* Retaillé en rounded-xl dans le JS */
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 600;
+            letter-spacing: 0.025em;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px 0 rgba(236, 72, 153, 0.4); /* NOUVEAU: Ombre rose/orange */
+        }
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #db2777, #ea580c); /* NOUVEAU: Rose plus foncé à Orange plus foncé */
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px 0 rgba(219, 39, 119, 0.5); /* NOUVEAU: Ombre rose/orange plus prononcée */
+        }
+        .header-glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .social-icon {
+            width: 24px;
+            height: 24px;
+            fill: currentColor; /* Permet à la couleur du texte du lien parent de s'appliquer */
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <header class="header-glass shadow-xl sticky top-0 z-50">
+        <nav class="container mx-auto px-4 sm:px-6 py-4">
+            <div class="flex items-center justify-between">
+                <a href="index.html" class="text-2xl sm:text-3xl font-serif font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent hover:from-purple-700 hover:to-pink-700 transition-all duration-300">
+                    Elystyle
+                </a>
+                <div class="flex items-center space-x-3 sm:space-x-6 text-sm sm:text-base">
+                    <a href="cart.html" class="text-gray-700 hover:text-purple-600 font-medium transition-all duration-200 relative group flex items-center">
+                        <span class="hidden sm:inline">🛍️ Panier</span>
+                        <span class="sm:hidden text-xl" aria-label="Panier">🛍️</span>
+                        <span id="cartCount" class="absolute -top-2 -right-2 bg-gradient-to-r from-pink-500 to-red-500 text-white text-xs rounded-full h-5 w-5 sm:h-6 sm:w-6 flex items-center justify-center font-bold shadow-lg">0</span>
+                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-purple-600 transition-all duration-300 group-hover:w-full"></span>
+                    </a>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 py-8">
+        
+        <section id="catalogSection" class="mb-12 sm:mb-16">
+            <h2 class="section-title font-serif">Notre Catalogue</h2>
+            <div id="categoryButtonsContainer" class="mb-8 text-center flex flex-wrap justify-center">
+                <button class="category-btn active" data-category="all">Tous</button>
+                <button class="category-btn" data-category="robes">Robes</button>
+                <button class="category-btn" data-category="hauts">Hauts</button>
+                <button class="category-btn" data-category="pantalons">Pantalons</button>
+                <button class="category-btn" data-category="jupes">Jupes</button>
+                <button class="category-btn" data-category="chaussures">Chaussures</button>
+            </div>
+
+            <div class="mb-8 p-4 search-container shadow-xl rounded-2xl flex flex-col sm:flex-row gap-4 items-center">
+                <div class="flex-grow w-full sm:w-auto">
+                    <input type="text" id="searchInput" placeholder="🔍 Rechercher par nom ou description..."
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                </div>
+                <div class="w-full sm:w-auto">
+                    <select id="priceFilter" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 bg-white">
+                        <option value="all">Tous les prix</option>
+                        <option value="0-50">Moins de 50 €</option>
+                        <option value="50-100">50 € - 100 €</option>
+                        <option value="100+">Plus de 100 €</option>
+                    </select>
+                </div>
+                <button id="clearFiltersButton" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg w-full sm:w-auto">
+                    Effacer
+                </button>
+            </div>
+            
+            <!-- Section À propos (Accordéon) -->
+            <section id="aboutSection" class="mb-8 sm:mb-12 animate-fade-in-up" style="animation-delay: 0.1s;">
+                <div class="bg-white/80 backdrop-blur-lg shadow-xl rounded-2xl overflow-hidden border border-purple-200/30">
+                    <button id="toggleAboutButton" aria-expanded="false" aria-controls="aboutContent" class="w-full flex justify-between items-center p-4 sm:p-5 text-left hover:bg-purple-50/50 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white/80 rounded-t-2xl">
+                        <h3 class="text-lg sm:text-xl font-semibold text-purple-700 font-serif">À propos d'Elystyle</h3>
+                        <svg id="aboutIcon" class="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                    <div id="aboutContent" class="px-4 sm:px-6 pb-4 sm:pb-6 text-gray-700 text-sm sm:text-base leading-relaxed max-h-0 overflow-hidden transition-all duration-500 ease-in-out">
+                        <h4 class="text-md sm:text-lg font-semibold text-purple-600 mt-4 mb-2">Bienvenue chez Elystyle, votre nouvelle destination mode en ligne !</h4>
+                        <p class="mb-3">Nous sommes une boutique dédiée à celles et ceux qui aiment affirmer leur style avec confiance, élégance et originalité.</p>
+                        <p class="mb-4">Chez Elystyle, nous croyons que la mode est bien plus qu’une simple affaire de vêtements : c’est une expression de soi, une attitude, un art de vivre. C’est pourquoi nous vous proposons des collections qui allient chic, modernité et esprit urbain, pour vous accompagner au quotidien comme lors de vos moments les plus spéciaux.</p>
+    
+                        <h4 class="text-md sm:text-lg font-semibold text-purple-600 mt-3 mb-2">Une vision claire : l’élégance accessible</h4>
+                        <p class="mb-4">Notre mission est simple : rendre la mode chic accessible à tous, sans compromis sur la qualité ni sur le style. Chaque article que nous proposons est soigneusement sélectionné pour sa coupe, sa matière, et son originalité. Nous mettons un point d'honneur à vous offrir des vêtements qui mettent en valeur votre personnalité, tout en suivant les dernières tendances urbaines et élégantes.</p>
+    
+                        <h4 class="text-md sm:text-lg font-semibold text-purple-600 mt-3 mb-2">Une boutique à taille humaine, avec de grandes ambitions</h4>
+                        <p class="mb-3">Elystyle est bien plus qu’un simple site e-commerce : c’est le fruit d’une passion profonde pour la mode et le style. Derrière chaque vêtement, il y a une vraie recherche, une vraie intention. Et derrière chaque commande, il y a vous – nos clients, qui êtes au cœur de tout ce que nous faisons.</p>
+                        <p class="mb-1">Notre équipe, jeune et motivée, s’engage à vous offrir :</p>
+                        <ul class="list-disc list-inside mb-4 ml-4 space-y-1 text-gray-600">
+                            <li>Un service client réactif et à l’écoute</li>
+                            <li>Une expérience de shopping fluide et agréable</li>
+                            <li>Des collections régulièrement renouvelées, pour que vous ne manquiez jamais d’inspiration</li>
+                        </ul>
+    
+                        <h4 class="text-md sm:text-lg font-semibold text-purple-600 mt-3 mb-2">Merci de faire partie de l’aventure</h4>
+                        <p class="mb-3">En choisissant Elystyle, vous soutenez une boutique indépendante qui croit en la créativité, en l’élégance, et en la force de la communauté. Chaque commande, chaque visite, chaque message de votre part nous aide à grandir et à continuer à vous proposer le meilleur.</p>
+                        <p>Merci de faire partie de cette aventure avec nous. La mode ne s’arrête jamais — et chez Elystyle, elle commence avec vous.</p>
+                    </div>
+                </div>
+            </section>
+
+            <div id="catalogProductList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div id="loadingCatalogMessage" class="col-span-full flex justify-center items-center py-12">
+                    <div class="flex items-center space-x-3">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                        <span class="text-gray-600 font-medium">Chargement du catalogue...</span>
+                    </div>
+                </div>
+            </div>
+            <p id="noCatalogResultsMessage" class="col-span-full text-center text-gray-500 mt-6" style="display: none;">Aucun produit ne correspond à vos critères.</p>
+        </section>
+
+        <section id="discountSection" class="mb-12 sm:mb-16">
+            <h2 class="section-title font-serif">🔥 Promotions Immanquables 🔥</h2>
+            <div class="overflow-x-auto pb-4 -mb-4"> 
+                <div id="discountProductList" class="flex flex-nowrap py-2"> 
+                </div>
+            </div>
+             <div id="loadingDiscountMessage" class="w-full flex justify-center items-center py-12" style="display:none;">
+                <div class="flex items-center space-x-3">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                    <span class="text-gray-600 font-medium">Chargement des promotions...</span>
+                </div>
+            </div>
+            <p id="noDiscountMessage" class="w-full text-center text-gray-500 mt-6" style="display: none;">Aucune promotion pour le moment.</p>
+        </section>
+
+    </main>
+
+    <footer class="bg-gradient-to-r from-purple-600 to-pink-600 text-white py-8 mt-auto shadow-inner">
+        <div class="container mx-auto px-4 sm:px-6 text-center">
+            <p class="text-lg">©2025 Elystyle. Tous droits réservés.</p>
+            <p class="text-sm mt-2">Créé avec ❤️ et passion.</p>
+            <div class="mt-6 flex justify-center items-center space-x-4 sm:space-x-6">
+                <a href="https://www.facebook.com/profile.php?id=100089019786958" target="_blank" rel="noopener noreferrer" aria-label="Facebook Elystyle" class="hover:text-pink-300 transition-colors duration-200">
+                    <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.77 7.46H14.5v-1.9c0-.9.6-1.1 1-1.1h3V.5h-4.33C10.24.5 9.5 3.64 9.5 5.35V7.46H6.11v4.09h3.39v10.04h4.09V11.55h3.39l.44-4.09z"/></svg>
+                </a>
+                <a href="https://www.instagram.com/elie.lengo?igsh=MTV0NzVsZWZyemZldQ==" target="_blank" rel="noopener noreferrer" aria-label="Instagram Elystyle" class="hover:text-pink-300 transition-colors duration-200">
+                    <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.689-.073-4.948-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                </a>
+                <a href="https://x.com/elie_lengo?t=Snxh-qBSUi7xibL_akTj8A&s=09" target="_blank" rel="noopener noreferrer" aria-label="X Elystyle" class="hover:text-pink-300 transition-colors duration-200">
+                    <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+                <a href="https://www.tiktok.com/@notorious4611?_t=ZM-8wtUBEeRlyQ&_r=1" target="_blank" rel="noopener noreferrer" aria-label="TikTok Elystyle" class="hover:text-pink-300 transition-colors duration-200">
+                    <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+                </a>
+                <a href="mailto:elielengo007@gmail.com" aria-label="Email Elystyle" class="hover:text-pink-300 transition-colors duration-200">
+                    <svg class="social-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5-8-5h16zm0 12H4V8l8 5 8-5v10z"/></svg>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const SUPABASE_URL = 'https://lnpwosbtodwnpyoaexjn.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxucHdvc2J0b2R3bnB5b2FleGpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcwNDgzNjUsImV4cCI6MjA2MjYyNDM2NX0.Frhd5AXpZRhRnTFup695TLlNhQ0h_NL0w-RohG5P8rA';
+
+        const { createClient } = supabase;
+        const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const discountProductListDiv = document.getElementById('discountProductList');
+        const loadingDiscountMessage = document.getElementById('loadingDiscountMessage');
+        const noDiscountMessage = document.getElementById('noDiscountMessage');
+
+        const catalogProductListDiv = document.getElementById('catalogProductList');
+        const loadingCatalogMessage = document.getElementById('loadingCatalogMessage');
+        const noCatalogResultsMessage = document.getElementById('noCatalogResultsMessage');
+        
+        const cartCountSpan = document.getElementById('cartCount');
+        const searchInput = document.getElementById('searchInput');
+        const priceFilterSelect = document.getElementById('priceFilter');
+        const clearFiltersButton = document.getElementById('clearFiltersButton');
+        const categoryButtonsContainer = document.getElementById('categoryButtonsContainer');
+
+        let allFetchedProducts = [];
+        let currentCategoryFilter = 'all';
+
+        function getCart() {
+            const cart = JSON.parse(localStorage.getItem('elystyleCart') || '[]'); 
+            return Array.isArray(cart) ? cart : [];
+        }
+
+        function saveCart(cart) {
+            localStorage.setItem('elystyleCart', JSON.stringify(cart));
+        }
+
+        function updateCartCount() {
+            const cart = getCart();
+            const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
+            if (cartCountSpan) {
+                 cartCountSpan.textContent = totalItems;
+            }
+        }
+        
+        function addToCart(productId, productName, productPrice, productImage) {
+            const cart = getCart();
+            const existingItemIndex = cart.findIndex(item => item.id === productId);
+            
+            if (existingItemIndex > -1) {
+                cart[existingItemIndex].quantity = (cart[existingItemIndex].quantity || 0) + 1;
+            } else {
+                cart.push({
+                    id: productId,
+                    name: productName,
+                    price: productPrice,
+                    image_url: productImage,
+                    quantity: 1
+                });
+            }
+            saveCart(cart);
+            updateCartCount();
+            showToast(`${productName} ajouté au panier!`);
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-5 right-5 bg-gradient-to-r from-purple-600 to-pink-500 text-white py-3 px-6 rounded-lg shadow-xl text-sm font-medium z-50 transform transition-all duration-300 ease-out';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // Initial state for fade-in and slide-up
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(20px)';
+            
+            // Trigger animation
+            setTimeout(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateY(0)';
+            }, 10);
+
+            // Auto-hide
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    if (document.body.contains(toast)) {
+                        document.body.removeChild(toast);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        function createProductCardHTML(product, isDiscountCard = false) {
+            const safeProductName = product.name ? product.name.replace(/'/g, "\\'") : "Produit";
+            const safeProductDescription = product.description ? product.description.replace(/'/g, "\\'") : 'Aucune description.';
+            const safeProductImage = product.image_url ? product.image_url.replace(/'/g, "\\'") : 'https://placehold.co/300x300/E9D5FF/7C3AED?text=Elystyle';
+
+            let badgesHTML = '';
+            let priceHTML;
+            let effectivePrice = parseFloat(product.price) || 0;
+
+            if (product.is_on_sale && typeof product.sale_price === 'number' && !isNaN(product.sale_price) && product.sale_price < effectivePrice) {
+                const originalPrice = effectivePrice;
+                effectivePrice = parseFloat(product.sale_price);
+                const discountPercentage = Math.round(((originalPrice - effectivePrice) / originalPrice) * 100);
+                badgesHTML += `<span class="badge-product badge-discount-display">-${discountPercentage}%</span>`;
+                priceHTML = `<del class="text-gray-500">${originalPrice.toFixed(2)} €</del> <span class="font-bold ${isDiscountCard ? 'text-sm' : 'text-lg'} text-red-600">${effectivePrice.toFixed(2)} €</span>`;
+            } else {
+                priceHTML = `<span class="font-bold ${isDiscountCard ? 'text-sm' : 'text-lg'} text-gray-800">${effectivePrice.toFixed(2)} €</span>`;
+            }
+            
+            const cardBaseClasses = "product-card bg-white rounded-2xl shadow-2xl overflow-hidden transform hover:scale-105 transition-transform duration-300 flex flex-col relative animate-fade-in-up";
+            const discountCardSpecificClasses = isDiscountCard ? "discount-product-card" : "";
+
+            const buttonDynamicClasses = isDiscountCard 
+                ? 'py-1 px-3 text-xs' 
+                : 'py-2 px-4 text-xs sm:text-sm';
+            const buttonRoundedClasses = isDiscountCard ? 'rounded-lg' : 'sm:rounded-xl rounded-lg';
+
+            return `
+                <div class="${cardBaseClasses} ${discountCardSpecificClasses}">
+                    ${badgesHTML}
+                    <div class="overflow-hidden ${isDiscountCard ? 'rounded-t-xl' : 'rounded-t-2xl'}">
+                        <img src="${safeProductImage}" alt="${safeProductName}" class="w-full ${isDiscountCard ? 'h-40 sm:h-44' : 'h-56'} object-cover">
+                    </div>
+                    <div class="product-card-content ${isDiscountCard ? 'p-3' : 'p-4 sm:p-6'} flex flex-col flex-grow">
+                        <h3 class="product-card-title ${isDiscountCard ? 'text-sm sm:text-base' : 'text-lg sm:text-xl'} font-semibold text-purple-700 mb-1 sm:mb-2 font-serif truncate" title="${product.name}">${product.name}</h3>
+                        ${!isDiscountCard ? `<p class="text-gray-600 text-sm mb-3 flex-grow product-card-description">${product.description || 'Aucune description.'}</p>` : `<p class="text-gray-600 text-xs mb-2 flex-grow product-card-description">${product.description || ''}</p>`}
+                        <div class="mt-auto">
+                            <div class="flex ${isDiscountCard ? 'flex-col items-start space-y-1' : 'flex-col sm:flex-row items-center justify-between gap-2 sm:gap-0'}">
+                                <div class="product-card-price ${isDiscountCard ? '' : 'mb-2 sm:mb-0'}"> ${priceHTML} </div>
+                                <button
+                                    class="btn-primary text-white font-bold ${buttonDynamicClasses} ${buttonRoundedClasses} add-to-cart-btn shadow-lg w-full ${isDiscountCard ? '' : 'sm:w-auto'}"
+                                    data-product-id="${product.id}"
+                                    data-product-name="${safeProductName}"
+                                    data-product-price="${effectivePrice}"
+                                    data-product-image="${safeProductImage}"
+                                >
+                                    Ajouter
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderProductsToDiv(productsToDisplay, targetDiv, loadingMsgElement, noResultsMsgElement, noItemsText = "Aucun produit ici.", isDiscountLayout = false) {
+            targetDiv.innerHTML = ''; 
+            if (loadingMsgElement) loadingMsgElement.style.display = 'none';
+            if (noResultsMsgElement) noResultsMsgElement.style.display = 'none';
+
+            if (productsToDisplay && productsToDisplay.length > 0) {
+                productsToDisplay.forEach(product => {
+                    targetDiv.innerHTML += createProductCardHTML(product, isDiscountLayout);
+                });
+                targetDiv.querySelectorAll('.add-to-cart-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const productId = this.dataset.productId;
+                        const productName = this.dataset.productName;
+                        const productPrice = parseFloat(this.dataset.productPrice);
+                        const productImage = this.dataset.productImage;
+                        addToCart(productId, productName, productPrice, productImage);
+                    });
+                });
+            } else {
+                if (noResultsMsgElement) {
+                    noResultsMsgElement.textContent = noItemsText;
+                    noResultsMsgElement.style.display = 'block';
+                } else { 
+                    targetDiv.innerHTML = `<p class="w-full text-center text-gray-500 py-8">${noItemsText}</p>`;
+                }
+            }
+        }
+
+        function applyCatalogFiltersAndRender() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const priceRange = priceFilterSelect.value;
+
+            const nonSaleProducts = allFetchedProducts.filter(p => !(p.is_on_sale && typeof p.sale_price === 'number' && p.sale_price < p.price));
+
+            let filteredCatalogProducts = nonSaleProducts.filter(product => {
+                const categoryMatch = (currentCategoryFilter === 'all' || product.category === currentCategoryFilter);
+                const nameMatch = product.name ? product.name.toLowerCase().includes(searchTerm) : false;
+                const descriptionMatch = product.description ? product.description.toLowerCase().includes(searchTerm) : false;
+                const textMatch = nameMatch || descriptionMatch;
+
+                let priceMatch = true;
+                if (priceRange !== "all") {
+                    const price = product.price;
+                    if (typeof price !== 'number' || isNaN(price)) {
+                        priceMatch = true; 
+                    } else if (priceRange === "0-50") priceMatch = price < 50;
+                    else if (priceRange === "50-100") priceMatch = price >= 50 && price <= 100;
+                    else if (priceRange === "100+") priceMatch = price > 100;
+                }
+                return categoryMatch && textMatch && priceMatch;
+            });
+            renderProductsToDiv(filteredCatalogProducts, catalogProductListDiv, loadingCatalogMessage, noCatalogResultsMessage, "Aucun produit ne correspond à vos critères.", false);
+        }
+
+        async function fetchAndDisplayAllProducts() {
+            if (loadingCatalogMessage) loadingCatalogMessage.style.display = 'flex';
+            if (loadingDiscountMessage) loadingDiscountMessage.style.display = 'flex'; 
+            
+            if (noCatalogResultsMessage) noCatalogResultsMessage.style.display = 'none';
+            if (noDiscountMessage) noDiscountMessage.style.display = 'none';
+
+            try {
+                const { data: products, error } = await _supabase
+                    .from('products')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+                allFetchedProducts = products || [];
+
+                applyCatalogFiltersAndRender();
+
+                const discountProducts = allFetchedProducts.filter(p => p.is_on_sale && typeof p.sale_price === 'number' && p.sale_price < p.price);
+                renderProductsToDiv(discountProducts, discountProductListDiv, loadingDiscountMessage, noDiscountMessage, "Aucune promotion pour le moment.", true);
+
+
+            } catch (err) {
+                console.error('Erreur JavaScript fetchAndDisplayAllProducts:', err);
+                if(loadingCatalogMessage) loadingCatalogMessage.style.display = 'none';
+                if(loadingDiscountMessage) loadingDiscountMessage.style.display = 'none';
+                catalogProductListDiv.innerHTML = '<p class="col-span-full text-center text-red-500">Erreur lors du chargement du catalogue. Veuillez réessayer plus tard.</p>';
+                discountProductListDiv.innerHTML = '<p class="w-full text-center text-red-500">Erreur lors du chargement des promotions. Veuillez réessayer plus tard.</p>';
+            } finally {
+                if(loadingCatalogMessage) loadingCatalogMessage.style.display = 'none';
+                if(loadingDiscountMessage) loadingDiscountMessage.style.display = 'none';
+            }
+            updateCartCount();
+        }
+
+        searchInput.addEventListener('input', applyCatalogFiltersAndRender);
+        priceFilterSelect.addEventListener('change', applyCatalogFiltersAndRender);
+
+        clearFiltersButton.addEventListener('click', () => {
+            searchInput.value = '';
+            priceFilterSelect.value = 'all';
+            currentCategoryFilter = 'all';
+            document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('.category-btn[data-category="all"]').classList.add('active');
+            applyCatalogFiltersAndRender();
+        });
+
+        categoryButtonsContainer.querySelectorAll('.category-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                categoryButtonsContainer.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                currentCategoryFilter = this.dataset.category;
+                applyCatalogFiltersAndRender();
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchAndDisplayAllProducts();
+            updateCartCount(); 
+            
+            // Accordion for About Section
+            const toggleAboutButton = document.getElementById('toggleAboutButton');
+            const aboutContent = document.getElementById('aboutContent');
+            const aboutIcon = document.getElementById('aboutIcon');
+
+            if (toggleAboutButton && aboutContent && aboutIcon) {
+                toggleAboutButton.addEventListener('click', () => {
+                    const isExpanded = toggleAboutButton.getAttribute('aria-expanded') === 'true';
+                    if (isExpanded) {
+                        aboutContent.classList.remove('max-h-[1000px]'); 
+                        aboutContent.classList.add('max-h-0');
+                        aboutIcon.classList.remove('rotate-180');
+                        toggleAboutButton.setAttribute('aria-expanded', 'false');
+                    } else {
+                        aboutContent.classList.remove('max-h-0');
+                        aboutContent.classList.add('max-h-[1000px]'); // Adjust if content is taller
+                        aboutIcon.classList.add('rotate-180');
+                        toggleAboutButton.setAttribute('aria-expanded', 'true');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
