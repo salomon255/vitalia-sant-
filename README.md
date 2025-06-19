@@ -1,2 +1,2 @@
-# vitalia-sant-
-Application de vente des produits pharmaceutiques et parapharmaceutiques 
+# Elystyle-
+Application de vente des produits d'habillement et accessoires 
